@@ -1,5 +1,6 @@
 const $=s=>document.querySelector(s);
 let me=null, config=null, socket=null, current="home";
+let seenMessageIds=new Set(), pendingMessages=[];
 
 async function api(url,opt={}){const r=await fetch(url,{...opt,headers:opt.body instanceof FormData?opt.headers:{"Content-Type":"application/json",...(opt.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"요청 실패");return d}
 async function boot(){
@@ -27,18 +28,66 @@ $("#app").innerHTML=`<div class="layout"><aside class="side"><div class="brand">
 <button data-p="home">🏠 홈</button><button data-p="chat">💬 채팅방</button><button data-p="friends">👥 친구</button><button data-p="memories">📸 추억공유</button><button data-p="profile">👤 프로필</button>${me.role==="admin"?`<button data-p="admin">🛡 관리자</button>`:""}
 </div></aside><main class="main"><div class="top"><h1 id="title"></h1><div class="user-mini"><div><b>${esc(me.nickname)}</b><div class="muted">@${esc(me.username)}</div></div><div class="avatar">${me.avatar?`<img class="avatar" src="${esc(me.avatar)}">`:esc(me.nickname[0]||"?")}</div><button id="logout" class="btn secondary small">로그아웃</button></div></div><section id="content"></section></main></div>`;
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.p));$("#logout").onclick=async()=>{await api("/api/logout",{method:"POST"});location.reload()};go("home");
-socket=io();socket.on("connect",()=>socket.emit("joinUser",me.id));socket.on("forceLogout",m=>{alert(m);location.reload()});
-socket.on("chatMessage",m=>{if(current==="chat")appendMessage(m)});
+if(!socket){
+  socket=io();
+  socket.on("connect",()=>socket.emit("joinUser",me.id));
+  socket.on("forceLogout",m=>{alert(m);location.reload()});
+  socket.on("chatMessage",m=>handleIncomingMessage(m));
+} else if(socket.connected){
+  socket.emit("joinUser",me.id);
+}
 }
 const titles={home:"홈",chat:"채팅방",friends:"친구",memories:"추억 공유방",profile:"프로필",admin:"관리자 패널"};
 async function go(p){current=p;$("#title").textContent=titles[p];document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.p===p));({home:home,chat:chat,friends:friends,memories:memories,profile:profile,admin:admin}[p])()}
 function home(){ $("#content").innerHTML=`<div class="grid"><div class="card"><h2>환영합니다, ${esc(me.nickname)}!</h2><p class="muted">FiveM 팩션원들의 채팅과 추억을 한곳에서 관리하세요.</p></div><div class="card"><h2>내 계정</h2><p>아이디 <b>@${esc(me.username)}</b></p><p>권한 <b>${me.role==="admin"?"관리자":"일반 사용자"}</b></p></div></div>`}
-async function chat(){const msgs=await api("/api/messages");$("#content").innerHTML=`<div class="card chat"><div id="messages" class="messages">${msgs.map(messageHTML).join("")}</div><form id="chatForm" class="chat-input"><input id="chatText" maxlength="500" placeholder="메시지를 입력하세요..." autocomplete="off"><button class="btn">전송</button></form></div>`;$("#chatForm").onsubmit=e=>{e.preventDefault();const t=chatText.value.trim();if(t){socket.emit("chatMessage",{userId:me.id,text:t});chatText.value=""}};scrollChat()}
-function messageHTML(m){return `<div class="msg"><strong>${esc(m.nickname)}</strong><span>${esc(m.text)}</span></div>`}
-function appendMessage(m){const box=$("#messages");if(!box)return;box.insertAdjacentHTML("beforeend",messageHTML(m));scrollChat()}
+async function chat(){
+  const msgs=await api("/api/messages");
+  const combined=[...msgs,...pendingMessages];
+  const unique=[]; const ids=new Set();
+  for(const m of combined){if(!ids.has(m.id)){ids.add(m.id);unique.push(m);seenMessageIds.add(m.id)}}
+  pendingMessages=[];
+  $("#content").innerHTML=`<div class="card chat"><div id="messages" class="messages">${unique.map(messageHTMLWithId).join("")}</div><form id="chatForm" class="chat-input"><input id="chatText" maxlength="500" placeholder="메시지를 입력하세요..." autocomplete="off"><button class="btn">전송</button></form></div>`;
+  $("#chatForm").onsubmit=e=>{e.preventDefault();const t=chatText.value.trim();if(t){socket.emit("chatMessage",{userId:me.id,text:t});chatText.value=""}};
+  scrollChat();
+}
+function messageHTML(m){
+  const avatar=m.avatar?`<img class="msg-avatar" src="${esc(m.avatar)}" alt="">`:`<div class="msg-avatar msg-avatar-fallback">${esc((m.nickname||"?")[0])}</div>`;
+  return `<div class="msg"><div class="msg-avatar-wrap">${avatar}</div><div class="msg-body"><div class="msg-meta"><strong class="msg-name">${esc(m.nickname)}</strong></div><div class="msg-text">${esc(m.text)}</div></div></div>`;
+}
+function handleIncomingMessage(m){
+  if(!m||!m.id||seenMessageIds.has(m.id))return;
+  seenMessageIds.add(m.id);
+  if(current==="chat"&&$("#messages")) appendMessage(m); else pendingMessages.push(m);
+}
+function appendMessage(m){
+  if(!m||seenMessageIds.has(m.id)===false) seenMessageIds.add(m.id);
+  const box=$("#messages");if(!box){pendingMessages.push(m);return;}
+  if(box.querySelector(`[data-message-id="${CSS.escape(m.id)}"]`))return;
+  box.insertAdjacentHTML("beforeend",messageHTMLWithId(m));scrollChat();
+}
+function messageHTMLWithId(m){
+  const avatar=m.avatar?`<img class="msg-avatar" src="${esc(m.avatar)}" alt="">`:`<div class="msg-avatar msg-avatar-fallback">${esc((m.nickname||"?")[0])}</div>`;
+  return `<div class="msg" data-message-id="${esc(m.id)}"><div class="msg-avatar-wrap">${avatar}</div><div class="msg-body"><div class="msg-meta"><strong class="msg-name">${esc(m.nickname)}</strong></div><div class="msg-text">${esc(m.text)}</div></div></div>`;
+}
 function scrollChat(){const b=$("#messages");if(b)b.scrollTop=b.scrollHeight}
-async function friends(){const [fs,users]=await Promise.all([api("/api/friends"),api("/api/users")]);const accepted=fs.filter(x=>x.status==="accepted");const incoming=fs.filter(x=>x.status==="pending"&&x.to===me.id);$("#content").innerHTML=`<div class="grid"><div class="card"><h2>친구 목록</h2><div class="users">${accepted.length?accepted.map(x=>friendRow(x,"friend")).join(""):`<p class="muted">친구가 없습니다.</p>`}</div></div><div class="card"><h2>받은 친구 요청</h2><div class="users">${incoming.length?incoming.map(x=>friendRow(x,"incoming")).join(""):`<p class="muted">받은 요청이 없습니다.</p>`}</div></div></div><div class="card" style="margin-top:18px"><h2>사용자 찾기 / 친구 추가</h2><div class="users">${users.map(u=>`<div class="user-row"><div class="avatar">${u.avatar?`<img class="avatar" src="${esc(u.avatar)}">`:esc(u.nickname[0]||"?")}</div><div class="grow"><b>${esc(u.nickname)}</b><div class="muted">@${esc(u.username)}</div></div><button class="btn small" onclick="addFriend('${u.id}')">친구 추가</button></div>`).join("")}</div></div>`}
-function friendRow(x,type){return `<div class="user-row"><div class="avatar">${esc(x.user.nickname[0]||"?")}</div><div class="grow"><b>${esc(x.user.nickname)}</b><div class="muted">@${esc(x.user.username)}</div></div>${type==="incoming"?`<button class="btn small" onclick="acceptFriend('${x.id}')">수락</button>`:""}<button class="btn danger small" onclick="removeFriend('${x.id}')">${type==="incoming"?"거절":"삭제"}</button></div>`}
+async function friends(){
+  const [fs,users]=await Promise.all([api("/api/friends"),api("/api/users")]);
+  const accepted=fs.filter(x=>x.status==="accepted");
+  const incoming=fs.filter(x=>x.status==="pending"&&x.to===me.id);
+  const relationshipByUser=new Map();
+  for(const f of fs){
+    const otherId=f.from===me.id?f.to:f.from;
+    relationshipByUser.set(otherId,f);
+  }
+  $("#content").innerHTML=`<div class="grid"><div class="card"><h2>친구 목록</h2><div class="users">${accepted.length?accepted.map(x=>friendRow(x,"friend")).join(""):`<p class="muted">친구가 없습니다.</p>`}</div></div><div class="card"><h2>받은 친구 요청</h2><div class="users">${incoming.length?incoming.map(x=>friendRow(x,"incoming")).join(""):`<p class="muted">받은 요청이 없습니다.</p>`}</div></div></div><div class="card" style="margin-top:18px"><h2>사용자 찾기 / 친구 추가</h2><div class="users">${users.map(u=>{
+    const f=relationshipByUser.get(u.id);
+    let label="친구 추가", disabled="";
+    if(f?.status==="accepted" || (f?.status==="pending"&&f.from===me.id)){label="친구완료";disabled="disabled";}
+    else if(f?.status==="pending"&&f.to===me.id){label="친구 요청 수신";disabled="disabled";}
+    return `<div class="user-row"><div class="avatar">${u.avatar?`<img class="avatar" src="${esc(u.avatar)}">`:esc(u.nickname[0]||"?")}</div><div class="grow"><b>${esc(u.nickname)}</b><div class="muted">@${esc(u.username)}</div></div><button class="btn small ${disabled?"secondary":""}" ${disabled} onclick="addFriend('${u.id}')">${label}</button></div>`;
+  }).join("")}</div></div>`;
+}
+function friendRow(x,type){return `<div class="user-row"><div class="avatar">${x.user.avatar?`<img class="avatar" src="${esc(x.user.avatar)}">`:esc(x.user.nickname[0]||"?")}</div><div class="grow"><b>${esc(x.user.nickname)}</b><div class="muted">@${esc(x.user.username)}</div></div>${type==="incoming"?`<button class="btn small" onclick="acceptFriend('${x.id}')">수락</button>`:""}<button class="btn danger small" onclick="removeFriend('${x.id}')">${type==="incoming"?"거절":"삭제"}</button></div>`}
 async function addFriend(id){try{await api("/api/friends/"+id,{method:"POST"});alert("친구 요청을 보냈습니다.");friends()}catch(e){alert(e.message)}}
 async function acceptFriend(id){await api("/api/friends/"+id+"/accept",{method:"POST"});friends()}
 async function removeFriend(id){await api("/api/friends/"+id,{method:"DELETE"});friends()}

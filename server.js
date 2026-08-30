@@ -197,10 +197,10 @@ io.on("connection",socket=>{
     const u=db.users.find(x=>x.id===data.userId);
     if(!u)return;
     if(db.bans.some(b=>b.userId===u.id))return;
-    const msg={id:id(),userId:u.id,nickname:u.nickname,text:String(data.text||"").slice(0,500),createdAt:new Date().toISOString()};
+    const msg={id:id(),userId:u.id,nickname:u.nickname,avatar:u.avatar||"",text:String(data.text||"").slice(0,500),createdAt:new Date().toISOString()};
     db.messages.push(msg); db.messages=db.messages.slice(-500); writeDb(db); io.emit("chatMessage",msg);
   });
 });
 
 app.get("*",(req,res)=>res.sendFile(path.join(__dirname,"public","index.html")));
-httpServer.listen(PORT,()=>console.log(`http://localhost:${PORT}`));
+httpServer.listen(PORT, "0.0.0.0", ()=>console.log(`Server listening on port ${PORT}`));

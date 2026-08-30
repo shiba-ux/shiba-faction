@@ -49,3 +49,14 @@ npm start
 **주의:** `server.js`는 더블클릭하지 마세요. 반드시 `start.bat` 또는 `npm start`로 실행해야 합니다.
 
 서버 종료는 `start.bat` 창에서 `Ctrl+C`를 누르면 됩니다.
+
+
+## Mobile / LAN access
+
+1. Connect the PC and phone to the same Wi-Fi.
+2. Run `start.bat`.
+3. If Windows asks for administrator permission, click Yes.
+4. The CMD window will show a LAN address such as `http://192.168.0.15:3000`.
+5. Open that address on the phone. Do not use `localhost:3000` on the phone.
+
+If the firewall permission was cancelled, run `allow_firewall.bat` as administrator and then start the server again.
