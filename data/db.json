@@ -1,0 +1,169 @@
+{
+  "settings": {
+    "factionName": "시바견 생존신고방",
+    "accent": "#5865f2"
+  },
+  "users": [
+    {
+      "id": "8f3c214c489569486c",
+      "username": "shiba1818",
+      "password": "c1bc5d2bb7d88ac6d7c9cc44d1dc710222a4961c5752ee885f28f1815c1b6c6c",
+      "nickname": "시바견",
+      "avatar": "",
+      "role": "admin",
+      "createdAt": "2026-08-30T01:38:05.433Z"
+    }
+  ],
+  "friendships": [],
+  "messages": [
+    {
+      "id": "c0cfceefeccdab074e",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "수헹님바보",
+      "createdAt": "2026-08-30T01:42:47.222Z"
+    },
+    {
+      "id": "2f85fd6e48fd1b6148",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "흠",
+      "createdAt": "2026-08-30T01:42:48.673Z"
+    },
+    {
+      "id": "4ccb78a3e795e35b79",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "야무지누",
+      "createdAt": "2026-08-30T01:42:50.276Z"
+    },
+    {
+      "id": "f565328e64654f7f2e",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㅇㄴ",
+      "createdAt": "2026-08-30T01:42:50.480Z"
+    },
+    {
+      "id": "522026ca13f07457e7",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㅁㄹㅇㄴ",
+      "createdAt": "2026-08-30T01:42:50.705Z"
+    },
+    {
+      "id": "92cbbe9aa92c8218c8",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㅁㄹ",
+      "createdAt": "2026-08-30T01:42:50.915Z"
+    },
+    {
+      "id": "09c2313fa303d08efd",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㅇㄴㅁㄹ",
+      "createdAt": "2026-08-30T01:42:51.134Z"
+    },
+    {
+      "id": "a62d7f1e6ea7c081c0",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄴㅁㄹ",
+      "createdAt": "2026-08-30T01:42:51.330Z"
+    },
+    {
+      "id": "a8ed34fbf6720b7c9f",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄴㅇㅁ",
+      "createdAt": "2026-08-30T01:42:51.518Z"
+    },
+    {
+      "id": "4515611e0abbc527b3",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄹㄴㅇ",
+      "createdAt": "2026-08-30T01:42:51.726Z"
+    },
+    {
+      "id": "6dcf80e81dfb3e5132",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄹㄴㅁ",
+      "createdAt": "2026-08-30T01:42:51.912Z"
+    },
+    {
+      "id": "296a236673c4e3ec25",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄹㄴㅁ",
+      "createdAt": "2026-08-30T01:42:52.125Z"
+    },
+    {
+      "id": "a8480c27e0a46e88f7",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㅇㄹ",
+      "createdAt": "2026-08-30T01:42:52.313Z"
+    },
+    {
+      "id": "7c12b8cac34f9b2e38",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄴㅁㅇㄹ",
+      "createdAt": "2026-08-30T01:42:52.535Z"
+    },
+    {
+      "id": "77fd1e4e51efd87d8c",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄴㅁㅇㄹ",
+      "createdAt": "2026-08-30T01:42:52.734Z"
+    },
+    {
+      "id": "36a7e0c52c84bf0661",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄴㅁㅇㄹ",
+      "createdAt": "2026-08-30T01:42:52.934Z"
+    },
+    {
+      "id": "cc8a09eb3fc5001e08",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄴㅇ",
+      "createdAt": "2026-08-30T01:42:53.128Z"
+    },
+    {
+      "id": "7092687971711d6767",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄹㄴㅇ",
+      "createdAt": "2026-08-30T01:42:53.326Z"
+    },
+    {
+      "id": "23c0ce2041a42c2c5d",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄹㄴㅁㅇ",
+      "createdAt": "2026-08-30T01:42:53.523Z"
+    },
+    {
+      "id": "a2c4e665a744bd31d5",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄹ",
+      "createdAt": "2026-08-30T01:42:53.717Z"
+    },
+    {
+      "id": "27ad267f4e0371f49d",
+      "userId": "8f3c214c489569486c",
+      "nickname": "시바견",
+      "text": "ㄴㅁㄹ",
+      "createdAt": "2026-08-30T01:42:53.917Z"
+    }
+  ],
+  "memories": [],
+  "bans": []
+}
