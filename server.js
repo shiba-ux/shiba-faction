@@ -20,6 +20,7 @@ fs.mkdirSync(DATA, { recursive: true });
 fs.mkdirSync(UPLOADS, { recursive: true });
 
 const dbFile = path.join(DATA, "db.json");
+const sessionsFile = path.join(DATA, "sessions.json");
 const defaultDb = {
   settings: { factionName: "시바견 생존신고방", accent: "#5865f2" },
   users: [],
@@ -29,9 +30,20 @@ const defaultDb = {
   bans: []
 };
 if (!fs.existsSync(dbFile)) fs.writeFileSync(dbFile, JSON.stringify(defaultDb, null, 2));
+if (!fs.existsSync(sessionsFile)) fs.writeFileSync(sessionsFile, JSON.stringify({}, null, 2));
 
 function readDb() { return JSON.parse(fs.readFileSync(dbFile, "utf8")); }
 function writeDb(db) { fs.writeFileSync(dbFile, JSON.stringify(db, null, 2)); }
+
+class JsonSessionStore extends session.Store {
+  constructor(file) { super(); this.file=file; }
+  read() { try { return JSON.parse(fs.readFileSync(this.file, "utf8")); } catch { return {}; } }
+  write(data) { fs.writeFileSync(this.file, JSON.stringify(data, null, 2)); }
+  get(sid, cb) { const all=this.read(); const row=all[sid]; if(!row) return cb(null,null); if(row.cookie?.expires && new Date(row.cookie.expires) < new Date()){ delete all[sid]; this.write(all); return cb(null,null); } cb(null,row); }
+  set(sid, sess, cb) { const all=this.read(); all[sid]=sess; this.write(all); cb?.(null); }
+  destroy(sid, cb) { const all=this.read(); delete all[sid]; this.write(all); cb?.(null); }
+  touch(sid, sess, cb) { const all=this.read(); if(all[sid]) { all[sid].cookie=sess.cookie; this.write(all); } cb?.(null); }
+}
 function id() { return crypto.randomBytes(9).toString("hex"); }
 function hash(p) { return crypto.createHash("sha256").update(p).digest("hex"); }
 function safeUser(u) {
@@ -51,9 +63,10 @@ function admin(req,res,next) {
 app.use(express.json({limit:"2mb"}));
 app.use(express.urlencoded({extended:true}));
 app.use(session({
-  secret: process.env.SESSION_SECRET || "change-this-secret-in-production",
+  secret: process.env.SESSION_SECRET || "shiba-faction-change-this-secret",
+  store:new JsonSessionStore(sessionsFile),
   resave:false, saveUninitialized:false,
-  cookie:{httpOnly:true, sameSite:"lax", maxAge:1000*60*60*24*7}
+  cookie:{httpOnly:true, sameSite:"lax", maxAge:1000*60*60*24*30}
 }));
 app.use(express.static(path.join(__dirname,"public")));
 app.use("/uploads", express.static(UPLOADS));
@@ -67,7 +80,12 @@ const upload=multer({storage, limits:{fileSize:8*1024*1024}, fileFilter:(_,file,
 }});
 
 app.get("/api/config",(req,res)=>res.json(readDb().settings));
-app.get("/api/me",(req,res)=>res.json({user:req.user?safeUser(req.user):null}));
+app.get("/api/me",(req,res)=>{
+  if(!req.session.userId) return res.json({user:null});
+  const db=readDb(), u=db.users.find(x=>x.id===req.session.userId);
+  if(!u) return res.json({user:null});
+  res.json({user:safeUser(u)});
+});
 
 app.post("/api/register",(req,res)=>{
   const {username,password,nickname}=req.body;
@@ -85,7 +103,10 @@ app.post("/api/login",(req,res)=>{
   const u=db.users.find(x=>x.username.toLowerCase()===String(username||"").toLowerCase());
   if(!u||u.password!==hash(String(password||""))) return res.status(401).json({error:"아이디 또는 비밀번호가 올바르지 않습니다."});
   if(db.bans.some(b=>b.userId===u.id)) return res.status(403).json({error:"차단된 계정입니다."});
-  req.session.userId=u.id; res.json({user:safeUser(u)});
+  req.session.userId=u.id;
+  const remember=Boolean(req.body?.remember);
+  req.session.cookie.maxAge=remember?1000*60*60*24*30:undefined;
+  res.json({user:safeUser(u)});
 });
 app.post("/api/logout",auth,(req,res)=>req.session.destroy(()=>res.json({ok:true})));
 
@@ -127,7 +148,7 @@ app.delete("/api/friends/:friendshipId",auth,(req,res)=>{
 });
 
 app.get("/api/messages",auth,(req,res)=>{
-  const db=readDb(); res.json(db.messages.slice(-100));
+  const db=readDb(); res.json(db.messages.slice(-5000));
 });
 
 app.post("/api/memories",auth,upload.single("image"),(req,res)=>{
@@ -198,7 +219,7 @@ io.on("connection",socket=>{
     if(!u)return;
     if(db.bans.some(b=>b.userId===u.id))return;
     const msg={id:id(),userId:u.id,nickname:u.nickname,avatar:u.avatar||"",text:String(data.text||"").slice(0,500),createdAt:new Date().toISOString()};
-    db.messages.push(msg); db.messages=db.messages.slice(-500); writeDb(db); io.emit("chatMessage",msg);
+    db.messages.push(msg); db.messages=db.messages.slice(-5000); writeDb(db); io.emit("chatMessage",msg);
   });
 });
 

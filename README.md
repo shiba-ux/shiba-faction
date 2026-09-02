@@ -60,3 +60,12 @@ npm start
 5. Open that address on the phone. Do not use `localhost:3000` on the phone.
 
 If the firewall permission was cancelled, run `allow_firewall.bat` as administrator and then start the server again.
+
+## V3 fixes included
+- Persistent file-backed sessions: restarting the server no longer logs everyone out.
+- Login form includes `로그인 유지 (30일)`.
+- Friend request states: `친구 추가` -> `요청 보냄` -> recipient accepts -> `친구완료`.
+- Chat messages show profile images and have duplicate-ID protection.
+- Responsive mobile navigation and layout improvements.
+- Admin, bans/kicks, administrator management, and memory photo features are retained.
+- `start.bat` also prints LAN URLs and attempts to allow TCP port 3000 in Windows Firewall.

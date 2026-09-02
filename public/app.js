@@ -18,9 +18,9 @@ $("#loginTab").onclick=()=>{$("#loginBox").classList.remove("hidden");$("#regBox
 $("#regTab").onclick=()=>{$("#regBox").classList.remove("hidden");$("#loginBox").classList.add("hidden");$("#regTab").classList.add("active");$("#loginTab").classList.remove("active")}
 $("#loginForm").onsubmit=login;$("#registerForm").onsubmit=register;
 }
-function loginForm(){return `<form id="loginForm"><div class="field"><label>아이디</label><input id="liUser" required></div><div class="field"><label>비밀번호</label><input id="liPass" type="password" required></div><button class="btn" style="width:100%">로그인</button></form>`}
+function loginForm(){return `<form id="loginForm"><div class="field"><label>아이디</label><input id="liUser" autocomplete="username" required></div><div class="field"><label>비밀번호</label><input id="liPass" type="password" autocomplete="current-password" required></div><label class="check"><input id="rememberMe" type="checkbox" checked> 로그인 유지 (30일)</label><button class="btn" style="width:100%;margin-top:14px">로그인</button></form>`}
 function registerForm(){return `<form id="registerForm"><div class="field"><label>사용할 아이디</label><input id="reUser" placeholder="영문/숫자/_ 3~24자" required></div><div class="field"><label>닉네임</label><input id="reNick" required></div><div class="field"><label>비밀번호</label><input id="rePass" type="password" minlength="6" required></div><button class="btn" style="width:100%">회원가입</button></form>`}
-async function login(e){e.preventDefault();try{const d=await api("/api/login",{method:"POST",body:JSON.stringify({username:liUser.value,password:liPass.value})});me=d.user;renderApp()}catch(x){$("#authError").innerHTML=`<div class="notice">${esc(x.message)}</div>`}}
+async function login(e){e.preventDefault();try{const d=await api("/api/login",{method:"POST",body:JSON.stringify({username:liUser.value,password:liPass.value,remember:rememberMe.checked})});me=d.user;renderApp()}catch(x){$("#authError").innerHTML=`<div class="notice">${esc(x.message)}</div>`}}
 async function register(e){e.preventDefault();try{const d=await api("/api/register",{method:"POST",body:JSON.stringify({username:reUser.value,nickname:reNick.value,password:rePass.value})});me=d.user;renderApp()}catch(x){$("#authError").innerHTML=`<div class="notice">${esc(x.message)}</div>`}}
 
 function renderApp(){
@@ -67,9 +67,10 @@ function appendMessage(m){
 }
 function messageHTMLWithId(m){
   const avatar=m.avatar?`<img class="msg-avatar" src="${esc(m.avatar)}" alt="">`:`<div class="msg-avatar msg-avatar-fallback">${esc((m.nickname||"?")[0])}</div>`;
-  return `<div class="msg" data-message-id="${esc(m.id)}"><div class="msg-avatar-wrap">${avatar}</div><div class="msg-body"><div class="msg-meta"><strong class="msg-name">${esc(m.nickname)}</strong></div><div class="msg-text">${esc(m.text)}</div></div></div>`;
+  return `<div class="msg" data-message-id="${esc(m.id)}"><div class="msg-avatar-wrap">${avatar}</div><div class="msg-body"><div class="msg-meta"><strong class="msg-name">${esc(m.nickname)}</strong><span class="msg-time">${formatChatTime(m.createdAt)}</span></div><div class="msg-text">${esc(m.text)}</div></div></div>`;
 }
 function scrollChat(){const b=$("#messages");if(b)b.scrollTop=b.scrollHeight}
+function formatChatTime(value){const d=new Date(value);if(Number.isNaN(d.getTime()))return "";return d.toLocaleString("ko-KR",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"})}
 async function friends(){
   const [fs,users]=await Promise.all([api("/api/friends"),api("/api/users")]);
   const accepted=fs.filter(x=>x.status==="accepted");
@@ -82,8 +83,9 @@ async function friends(){
   $("#content").innerHTML=`<div class="grid"><div class="card"><h2>친구 목록</h2><div class="users">${accepted.length?accepted.map(x=>friendRow(x,"friend")).join(""):`<p class="muted">친구가 없습니다.</p>`}</div></div><div class="card"><h2>받은 친구 요청</h2><div class="users">${incoming.length?incoming.map(x=>friendRow(x,"incoming")).join(""):`<p class="muted">받은 요청이 없습니다.</p>`}</div></div></div><div class="card" style="margin-top:18px"><h2>사용자 찾기 / 친구 추가</h2><div class="users">${users.map(u=>{
     const f=relationshipByUser.get(u.id);
     let label="친구 추가", disabled="";
-    if(f?.status==="accepted" || (f?.status==="pending"&&f.from===me.id)){label="친구완료";disabled="disabled";}
-    else if(f?.status==="pending"&&f.to===me.id){label="친구 요청 수신";disabled="disabled";}
+    if(f?.status==="accepted"){label="친구완료";disabled="disabled";}
+    else if(f?.status==="pending"&&f.from===me.id){label="요청 보냄";disabled="disabled";}
+    else if(f?.status==="pending"&&f.to===me.id){label="요청 받음";disabled="disabled";}
     return `<div class="user-row"><div class="avatar">${u.avatar?`<img class="avatar" src="${esc(u.avatar)}">`:esc(u.nickname[0]||"?")}</div><div class="grow"><b>${esc(u.nickname)}</b><div class="muted">@${esc(u.username)}</div></div><button class="btn small ${disabled?"secondary":""}" ${disabled} onclick="addFriend('${u.id}')">${label}</button></div>`;
   }).join("")}</div></div>`;
 }
