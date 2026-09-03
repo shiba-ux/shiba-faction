@@ -1,71 +1,75 @@
-# FiveM Faction Community 1차 완성본
+# 시바견 생존신고방 V7
 
-## 포함 기능
-- 회원가입 / 로그인
-- 고유 아이디와 닉네임 분리
-- 프로필 수정
-- 전체 실시간 채팅
-- 친구 요청 / 수락 / 삭제
-- 추억 사진 업로드 / 삭제
-- 관리자 패널
-- 관리자 설정 변경
-- 사용자 킥 / 차단 / 차단 해제
-- 관리자 추가 / 삭제
-- 첫 가입 계정은 자동으로 관리자 권한 부여
+## 핵심 변경: 서버 코드와 사용자 데이터를 완전히 분리
 
-## 실행 방법
+V7부터 회원 데이터가 프로젝트 폴더의 `data`에 저장되지 않습니다.
+Windows에서 `start.bat`으로 실행하면 기본적으로 아래 폴더에 영구 저장됩니다.
 
-1. Node.js 18 이상 설치
-2. 이 폴더에서 터미널 실행
-3. 아래 명령 실행
+```text
+C:\Users\사용자이름\ShibaFactionData\
+├─ db.json          # 회원, 친구, 채팅, 설정, 추억 메타데이터
+├─ sessions.json    # 영구 로그인 세션
+└─ uploads\        # 추억/사진 파일
+```
 
-```bash
-npm install
+따라서 다음과 같이 서버 폴더를 통째로 교체해도 위 데이터는 그대로 남습니다.
+
+```text
+V6 서버 폴더 삭제
+↓
+V7 서버 폴더 설치
+↓
+start.bat 실행
+↓
+기존 회원/로그인/채팅/친구/사진 그대로 사용
+```
+
+## 기존 버전에서 V7로 처음 옮길 때
+
+V7은 프로젝트 안에 기존 `data/db.json` 또는 `uploads`가 있다면, 외부 영구 데이터 폴더에 해당 파일이 아직 없을 때만 자동으로 복사합니다.
+
+이미 `C:\Users\사용자이름\ShibaFactionData`에 데이터가 있다면 **기존 데이터를 절대 덮어쓰지 않습니다.**
+
+## 다른 PC/서버에서 데이터 위치 지정
+
+환경변수 `SHIBA_DATA_DIR`을 원하는 영구 경로로 지정할 수 있습니다.
+
+Windows 예:
+
+```bat
+set SHIBA_DATA_DIR=D:\ShibaFactionData
 npm start
 ```
 
-4. 브라우저에서 http://localhost:3000 접속
+Render 등의 클라우드에서는 서버 코드와 별도의 영구 디스크/DB를 사용해야 합니다. 단순한 서버 재배포만으로 영구 보존이 보장되는 것은 아닙니다.
 
-## 중요
-- `data/db.json`에 사이트 데이터가 저장됩니다.
-- `uploads/`에 업로드된 사진이 저장됩니다.
-- 실제 공개 서버에 배포할 때는 반드시 `SESSION_SECRET` 환경변수를 강한 랜덤 문자열로 변경하세요.
-- 이 1차 버전은 학습/프로토타입 목적입니다. 실제 공개 서비스에서는 PostgreSQL, Redis, CSRF 방어, rate limit, 이미지 검사/리사이징, HTTPS, 더 강한 인증 체계를 추가하는 것을 권장합니다.
+## 포함 기능
 
-## 직접 수정
-- 사이트 디자인: `public/style.css`
-- 화면/기능: `public/app.js`
-- 서버/API: `server.js`
-- 초기 설정: `data/db.json`
+- 회원가입 / 로그인
+- 로그아웃
+- 영구 로그인 세션
+- 프로필 수정
+- 실시간 채팅 + 채팅 기록
+- 친구 요청 / 수락 / 삭제
+- 추억 사진 업로드 / 삭제
+- 관리자 패널
+- 관리자 추가 / 삭제
+- 킥 / 차단 / 차단 해제
+- 사이트 설정
+- 모바일 반응형 Premium UI
 
+## 실행
 
-## Windows에서 가장 쉽게 실행하기
+`start.bat` 더블클릭 → `http://localhost:3000`
 
-`start.bat`을 더블클릭하세요.
+`server.js`는 더블클릭하지 마세요.
 
-처음 실행할 때는 자동으로 `npm install`을 실행합니다.
-그 후 서버가 켜지고 브라우저에서 `http://localhost:3000`으로 접속하면 됩니다.
+## 백업
 
-**주의:** `server.js`는 더블클릭하지 마세요. 반드시 `start.bat` 또는 `npm start`로 실행해야 합니다.
+서버 파일과 데이터는 분리되어 있지만, 중요한 서비스라면 아래 폴더를 정기적으로 백업하세요.
 
-서버 종료는 `start.bat` 창에서 `Ctrl+C`를 누르면 됩니다.
+```text
+C:\Users\사용자이름\ShibaFactionData
+```
 
-
-## Mobile / LAN access
-
-1. Connect the PC and phone to the same Wi-Fi.
-2. Run `start.bat`.
-3. If Windows asks for administrator permission, click Yes.
-4. The CMD window will show a LAN address such as `http://192.168.0.15:3000`.
-5. Open that address on the phone. Do not use `localhost:3000` on the phone.
-
-If the firewall permission was cancelled, run `allow_firewall.bat` as administrator and then start the server again.
-
-## V3 fixes included
-- Persistent file-backed sessions: restarting the server no longer logs everyone out.
-- Login form includes `로그인 유지 (30일)`.
-- Friend request states: `친구 추가` -> `요청 보냄` -> recipient accepts -> `친구완료`.
-- Chat messages show profile images and have duplicate-ID protection.
-- Responsive mobile navigation and layout improvements.
-- Admin, bans/kicks, administrator management, and memory photo features are retained.
-- `start.bat` also prints LAN URLs and attempts to allow TCP port 3000 in Windows Firewall.
+이 폴더만 백업하면 서버 코드를 새 버전으로 교체해도 사이트의 핵심 데이터를 복구할 수 있습니다.

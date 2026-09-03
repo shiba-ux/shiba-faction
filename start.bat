@@ -3,9 +3,18 @@ setlocal
 cd /d "%~dp0"
 title Shiba Faction Community Server
 
+REM Persistent data is intentionally stored outside this server folder.
+REM You can replace/delete the whole project folder without deleting site data.
+set "SHIBA_DATA_DIR=%USERPROFILE%\ShibaFactionData"
+
+if not exist "%SHIBA_DATA_DIR%" mkdir "%SHIBA_DATA_DIR%"
+
 echo ==========================================
-echo   SHIBA FACTION COMMUNITY SERVER
+echo   SHIBA FACTION COMMUNITY SERVER V7
 echo ==========================================
+echo.
+echo Persistent data folder:
+echo   %SHIBA_DATA_DIR%
 echo.
 
 where node >nul 2>&1

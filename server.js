@@ -14,13 +14,38 @@ const httpServer = createServer(app);
 const io = new Server(httpServer);
 
 const PORT = process.env.PORT || 3000;
-const DATA = path.join(__dirname, "data");
-const UPLOADS = path.join(__dirname, "uploads");
+const PERMANENT_SESSION_MS = 1000 * 60 * 60 * 24 * 365 * 10; // 10 years (effectively permanent)
+// IMPORTANT: site data lives OUTSIDE the server/project folder.
+// Replacing this entire project folder therefore does not replace accounts,
+// sessions, chat history, friendships, settings, or uploaded memories.
+const DEFAULT_DATA_ROOT = path.join(process.env.USERPROFILE || process.env.HOME || __dirname, "ShibaFactionData");
+const DATA = path.resolve(process.env.SHIBA_DATA_DIR || DEFAULT_DATA_ROOT);
+const UPLOADS = path.join(DATA, "uploads");
 fs.mkdirSync(DATA, { recursive: true });
 fs.mkdirSync(UPLOADS, { recursive: true });
 
 const dbFile = path.join(DATA, "db.json");
 const sessionsFile = path.join(DATA, "sessions.json");
+
+// One-time migration from older versions where data was stored inside the project.
+// Existing persistent data always wins; nothing is overwritten.
+const legacyData = path.join(__dirname, "data");
+const legacyUploads = path.join(__dirname, "uploads");
+function copyIfMissing(src, dest) {
+  if (fs.existsSync(src) && !fs.existsSync(dest)) {
+    fs.copyFileSync(src, dest);
+    console.log(`[DATA] Migrated: ${src} -> ${dest}`);
+  }
+}
+copyIfMissing(path.join(legacyData, "db.json"), dbFile);
+copyIfMissing(path.join(legacyData, "sessions.json"), sessionsFile);
+if (fs.existsSync(legacyUploads)) {
+  for (const name of fs.readdirSync(legacyUploads)) {
+    const src = path.join(legacyUploads, name);
+    const dest = path.join(UPLOADS, name);
+    if (fs.statSync(src).isFile()) copyIfMissing(src, dest);
+  }
+}
 const defaultDb = {
   settings: { factionName: "시바견 생존신고방", accent: "#5865f2" },
   users: [],
@@ -84,7 +109,9 @@ app.get("/api/me",(req,res)=>{
   if(!req.session.userId) return res.json({user:null});
   const db=readDb(), u=db.users.find(x=>x.id===req.session.userId);
   if(!u) return res.json({user:null});
-  res.json({user:safeUser(u)});
+  // Upgrade existing sessions to the permanent login policy.
+  req.session.cookie.maxAge = PERMANENT_SESSION_MS;
+  req.session.save(()=>res.json({user:safeUser(u)}));
 });
 
 app.post("/api/register",(req,res)=>{
@@ -94,8 +121,10 @@ app.post("/api/register",(req,res)=>{
   const db=readDb();
   if(db.users.some(u=>u.username.toLowerCase()===username.toLowerCase())) return res.status(409).json({error:"이미 사용 중인 아이디입니다."});
   const u={id:id(),username,password:hash(password),nickname:nickname.slice(0,30),avatar:"",role:db.users.length===0?"admin":"user",createdAt:new Date().toISOString()};
-  db.users.push(u); writeDb(db); req.session.userId=u.id;
-  res.json({user:safeUser(u)});
+  db.users.push(u); writeDb(db);
+  req.session.userId=u.id;
+  req.session.cookie.maxAge=PERMANENT_SESSION_MS;
+  req.session.save(()=>res.json({user:safeUser(u)}));
 });
 
 app.post("/api/login",(req,res)=>{
@@ -104,11 +133,18 @@ app.post("/api/login",(req,res)=>{
   if(!u||u.password!==hash(String(password||""))) return res.status(401).json({error:"아이디 또는 비밀번호가 올바르지 않습니다."});
   if(db.bans.some(b=>b.userId===u.id)) return res.status(403).json({error:"차단된 계정입니다."});
   req.session.userId=u.id;
-  const remember=Boolean(req.body?.remember);
-  req.session.cookie.maxAge=remember?1000*60*60*24*30:undefined;
-  res.json({user:safeUser(u)});
+  // Login is always persistent. Closing the browser or restarting the server
+  // will not log the user out. The session store is backed by data/sessions.json.
+  req.session.cookie.maxAge=PERMANENT_SESSION_MS;
+  req.session.save(()=>res.json({user:safeUser(u)}));
 });
-app.post("/api/logout",auth,(req,res)=>req.session.destroy(()=>res.json({ok:true})));
+app.post("/api/logout",(req,res)=>{
+  if(!req.session) return res.json({ok:true});
+  req.session.destroy(()=>{
+    res.clearCookie("connect.sid",{httpOnly:true,sameSite:"lax"});
+    res.json({ok:true});
+  });
+});
 
 app.put("/api/profile",auth,(req,res)=>{
   const {nickname,avatar}=req.body; const db=readDb();
@@ -166,7 +202,7 @@ app.delete("/api/memories/:id",auth,(req,res)=>{
   if(i<0)return res.status(404).json({error:"사진을 찾을 수 없습니다."});
   const m=db.memories[i];
   if(m.userId!==req.user.id&&req.user.role!=="admin")return res.status(403).json({error:"삭제 권한이 없습니다."});
-  const fp=path.join(__dirname,m.image.replace("/uploads/","uploads/"));
+  const fp=path.join(UPLOADS,path.basename(m.image));
   if(fs.existsSync(fp)) fs.unlinkSync(fp);
   db.memories.splice(i,1); writeDb(db); res.json({ok:true});
 });

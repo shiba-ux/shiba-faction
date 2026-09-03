@@ -18,16 +18,16 @@ $("#loginTab").onclick=()=>{$("#loginBox").classList.remove("hidden");$("#regBox
 $("#regTab").onclick=()=>{$("#regBox").classList.remove("hidden");$("#loginBox").classList.add("hidden");$("#regTab").classList.add("active");$("#loginTab").classList.remove("active")}
 $("#loginForm").onsubmit=login;$("#registerForm").onsubmit=register;
 }
-function loginForm(){return `<form id="loginForm"><div class="field"><label>아이디</label><input id="liUser" autocomplete="username" required></div><div class="field"><label>비밀번호</label><input id="liPass" type="password" autocomplete="current-password" required></div><label class="check"><input id="rememberMe" type="checkbox" checked> 로그인 유지 (30일)</label><button class="btn" style="width:100%;margin-top:14px">로그인</button></form>`}
+function loginForm(){return `<form id="loginForm"><div class="field"><label>아이디</label><input id="liUser" autocomplete="username" required></div><div class="field"><label>비밀번호</label><input id="liPass" type="password" autocomplete="current-password" required></div><div class="login-persist">✓ 로그인 유지가 자동으로 적용됩니다. 로그아웃을 누르기 전까지 유지됩니다.</div><button class="btn" style="width:100%;margin-top:14px">로그인</button></form>`}
 function registerForm(){return `<form id="registerForm"><div class="field"><label>사용할 아이디</label><input id="reUser" placeholder="영문/숫자/_ 3~24자" required></div><div class="field"><label>닉네임</label><input id="reNick" required></div><div class="field"><label>비밀번호</label><input id="rePass" type="password" minlength="6" required></div><button class="btn" style="width:100%">회원가입</button></form>`}
-async function login(e){e.preventDefault();try{const d=await api("/api/login",{method:"POST",body:JSON.stringify({username:liUser.value,password:liPass.value,remember:rememberMe.checked})});me=d.user;renderApp()}catch(x){$("#authError").innerHTML=`<div class="notice">${esc(x.message)}</div>`}}
+async function login(e){e.preventDefault();try{const d=await api("/api/login",{method:"POST",body:JSON.stringify({username:liUser.value,password:liPass.value})});me=d.user;renderApp()}catch(x){$("#authError").innerHTML=`<div class="notice">${esc(x.message)}</div>`}}
 async function register(e){e.preventDefault();try{const d=await api("/api/register",{method:"POST",body:JSON.stringify({username:reUser.value,nickname:reNick.value,password:rePass.value})});me=d.user;renderApp()}catch(x){$("#authError").innerHTML=`<div class="notice">${esc(x.message)}</div>`}}
 
 function renderApp(){
 $("#app").innerHTML=`<div class="layout"><aside class="side"><div class="brand">${esc(config.factionName)}</div><div class="nav">
 <button data-p="home">🏠 홈</button><button data-p="chat">💬 채팅방</button><button data-p="friends">👥 친구</button><button data-p="memories">📸 추억공유</button><button data-p="profile">👤 프로필</button>${me.role==="admin"?`<button data-p="admin">🛡 관리자</button>`:""}
 </div></aside><main class="main"><div class="top"><h1 id="title"></h1><div class="user-mini"><div><b>${esc(me.nickname)}</b><div class="muted">@${esc(me.username)}</div></div><div class="avatar">${me.avatar?`<img class="avatar" src="${esc(me.avatar)}">`:esc(me.nickname[0]||"?")}</div><button id="logout" class="btn secondary small">로그아웃</button></div></div><section id="content"></section></main></div>`;
-document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.p));$("#logout").onclick=async()=>{await api("/api/logout",{method:"POST"});location.reload()};go("home");
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.p));$("#logout").onclick=logout;go("home");
 if(!socket){
   socket=io();
   socket.on("connect",()=>socket.emit("joinUser",me.id));
@@ -36,6 +36,13 @@ if(!socket){
 } else if(socket.connected){
   socket.emit("joinUser",me.id);
 }
+}
+async function logout(){
+  if(!confirm("로그아웃할까요?")) return;
+  try{await api("/api/logout",{method:"POST"});}catch(e){console.error(e)}
+  me=null;
+  if(socket){socket.disconnect();socket=null;}
+  renderAuth();
 }
 const titles={home:"홈",chat:"채팅방",friends:"친구",memories:"추억 공유방",profile:"프로필",admin:"관리자 패널"};
 async function go(p){current=p;$("#title").textContent=titles[p];document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.p===p));({home:home,chat:chat,friends:friends,memories:memories,profile:profile,admin:admin}[p])()}
